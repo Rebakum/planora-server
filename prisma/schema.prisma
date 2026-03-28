@@ -34,6 +34,13 @@ model User {
 
   @@map("user")
 }
+model EmailOtp {
+  id        String   @id @default(cuid())
+  email     String
+  otp       String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
 
 model Event {
   id          String   @id @default(uuid())

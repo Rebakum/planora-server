@@ -22,42 +22,49 @@ declare global {
 //middle ware
 const auth = (...roles: UserRole[]) => {
   return async (req: Request, res: Response, next: NextFunction) => {
-    // console.log(roles);
-    //get user session
     try {
-      //   console.log("Headers:", req.headers);
       const session = await betterAuth.api.getSession({
         headers: req.headers as any,
       });
-      if (!session) {
+
+      if (!session || !session.user) {
         return res.status(401).json({
           success: false,
-          message: "You are not Authorized",
+          message: "Unauthorized",
         });
       }
-      if (!session?.user.emailVerified) {
+
+      // optional (better UX)
+      if (!session.user.emailVerified) {
         return res.status(403).json({
           success: false,
-          message: "Email Verification required. Please verify your email",
+          message: "Please verify your email first",
         });
       }
+
       req.user = {
         id: session.user.id,
         email: session.user.email,
         name: session.user.name,
-        role: session.user.role as UserRole,
+        role: (session.user.role as UserRole) || UserRole.user,
         emailVerified: session.user.emailVerified,
       };
 
-      if (roles.length && !roles.includes(req.user.role as UserRole)) {
+      // 🔥 ROLE CHECK
+      if (roles.length && !roles.includes(req.user.role)) {
         return res.status(403).json({
           success: false,
-          message: "Forbidden! You don't permission to access this resources ",
+          message: "Forbidden",
         });
       }
+
       next();
-    } catch (err) {
-      next(err);
+    } catch (error) {
+      console.error("Auth Error:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Authentication failed",
+      });
     }
   };
 };

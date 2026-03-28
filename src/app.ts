@@ -18,7 +18,11 @@ cors({
   credentials: true,
 })
 )
-app.use("/api/auth", toNodeHandler(auth));
+// app.use("/api/auth", toNodeHandler(auth));
+app.use("/api/auth", (req, res, next) => {
+  console.log("AUTH HIT:", req.method, req.url);
+  next();
+}, toNodeHandler(auth));
 
 app.use("/api",router)
 

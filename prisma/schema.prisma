@@ -17,6 +17,7 @@ model User {
   id            String    @id @default(uuid())
   name          String
   email         String    @unique
+  password      String   // ✅ JWT এর জন্য MUST
   emailVerified Boolean   @default(false)
   image         String?
   role          String    @default("USER")

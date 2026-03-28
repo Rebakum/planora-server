@@ -33,38 +33,30 @@ export const auth = betterAuth({
 
   emailAndPassword: {
     enabled: true,
-    autoSignIn: false,
-    requireEmailVerification: true,
+    autoSignIn: false, // ❗ signup এর পর login হবে না
+    requireEmailVerification: true, // ❗ verify না করলে login blocked
   },
 
   emailVerification: {
     sendOnSignUp: true,
 
-  sendVerificationEmail: async ({ user, url, token }) => {
-  try {
-    await transporter.sendMail({
-      from: '"Prisma Blog" <prismablog@ph.com>',
-      to: user.email,
-      subject: "Please verify your email",
+    sendVerificationEmail: async ({ user, url }) => {
+      await transporter.sendMail({
+        from: '"Planora" <no-reply@planora.com>',
+        to: user.email,
+        subject: "Verify your email",
 
-      html: `
-        <h2>Hello ${user.name || "there"}</h2>
+        html: `
+          <h2>Hello ${user.name || "User"}</h2>
+          <p>Click below to verify:</p>
 
-        <p>Please verify your email:</p>
+          <a href="${url}" style="padding:10px 20px;background:#4f46e5;color:white;text-decoration:none;">
+            Verify Email
+          </a>
 
-        <a href="${url}" style="padding:10px 20px;background:#4f46e5;color:white;text-decoration:none;">
-          Verify Email
-        </a>
-
-        <p>${url}</p>
-      `,
-    });
-
-    // ❌ কিছু return করবে না
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-},
+          <p>${url}</p>
+        `,
+      });
+    },
   },
 });

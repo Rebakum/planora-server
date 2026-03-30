@@ -1,15 +1,17 @@
-import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
-import config from "../../middlewares/config";
+import { sendOTP } from "../../utils/email";
+import { prisma } from "../../lib/prisma";
+import crypto from "crypto";
 
-const prisma = new PrismaClient();
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  verifyRefreshToken,
+} from "../../utils/jwt";
 
-// 🔐 SIGNUP
-export const signupUser = async (payload: any) => {
+export const signupService = async (payload: any) => {
   const { email, password, name } = payload;
 
-  // check existing user
   const existingUser = await prisma.user.findUnique({
     where: { email },
   });
@@ -18,54 +20,145 @@ export const signupUser = async (payload: any) => {
     throw new Error("User already exists");
   }
 
-  // hash password
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  // create user
-  const user = await prisma.user.create({
-    data: {
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+await prisma.user.create({
+  data: {
+    email,
+    password: hashedPassword,
+    name,
+    role: "USER",
+
+    emailOtps: {
+      create: {
+        email,
+        otp,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      },
+    },
+  },
+});
+
+  await sendOTP(email, otp);
+
+  return { message: "Check email for OTP" };
+};
+
+export const verifyOTPService = async (payload: any) => {
+  const { email, otp } = payload;
+
+  const record = await prisma.emailOtp.findFirst({
+    where: {
       email,
-      password: hashedPassword,
-      name,
+      otp,
     },
   });
 
-  return user;
-};
+  if (!record) {
+    throw new Error("Invalid OTP");
+  }
 
-// 🔑 LOGIN
-export const loginUser = async (payload: any) => {
-  const { email, password } = payload;
+  if (record.expiresAt < new Date()) {
+    throw new Error("OTP expired");
+  }
 
-  const user = await prisma.user.findUnique({
+  await prisma.user.update({
+    where: { email },
+    data: {
+      emailVerified: true,
+    },
+  });
+
+  await prisma.emailOtp.deleteMany({
     where: { email },
   });
 
-  if (!user) {
-    throw new Error("User not found");
-  }
+  return { message: "Email verified" };
+};
+
+export const loginService = async (payload: any, req: any) => {
+  const { email, password } = payload;
+
+  const user = await prisma.user.findUnique({ where: { email } });
+
+  if (!user) throw new Error("Invalid credentials");
 
   const isMatch = await bcrypt.compare(password, user.password);
+  if (!isMatch) throw new Error("Invalid credentials");
 
-  if (!isMatch) {
-    throw new Error("Invalid password");
-  }
+  if (!user.emailVerified) throw new Error("Email not verified");
+ 
 
-  // 🎉 generate token
-  const token = jwt.sign(
-    {
-      id: user.id,
-      email: user.email,
-      role: user.role,
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user);
+   if (! accessToken || !refreshToken) {
+  throw new Error("JWT secrets missing in .env");
+}
+
+  await prisma.session.create({
+    data: {
+      id: crypto.randomUUID(),
+      userId: user.id,
+      token: refreshToken,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
     },
-    config.jwt.secret,
-    {
-      expiresIn: config.jwt.expires_in,
-    }
-  );
+  });
+
+  return { user, accessToken, refreshToken };
+};
+
+export const refreshTokenService = async (oldToken: string) => {
+  const decoded: any = verifyRefreshToken(oldToken);
+
+  const session = await prisma.session.findUnique({
+    where: { token: oldToken },
+  });
+
+ if (!session) {
+  await prisma.session.deleteMany({ where: { userId: decoded.id } });
+  throw new Error("Token reuse detected. All sessions killed.");
+}
+
+  const user = await prisma.user.findUnique({
+    where: { id: decoded.id },
+  });
+
+  if (!user) throw new Error("User not found");
+
+  // 🔥 generate NEW tokens
+  const newAccessToken = generateAccessToken(user);
+  const newRefreshToken = generateRefreshToken(user);
+
+  //  save NEW session
+  await prisma.session.create({
+    data: {
+      id: crypto.randomUUID(),
+      userId: user.id,
+      token: newRefreshToken,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    },
+  });
 
   return {
-    token,
-    user,
+    accessToken: newAccessToken,
+    refreshToken: newRefreshToken,
   };
+};
+export const getMySessionsService = async (userId: string) => {
+  const sessions = await prisma.session.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return sessions;
+};
+
+export const logoutAllService = async (userId: string) => {
+  await prisma.session.deleteMany({
+    where: { userId },
+  });
 };

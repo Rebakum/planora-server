@@ -1,10 +1,3 @@
-
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,35 +6,76 @@ datasource db {
   provider = "postgresql"
 }
 
+//////////////////////
+// 🔐 ENUMS
+//////////////////////
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+}
+
+enum ParticipationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+//////////////////////
+// 👤 USER
+//////////////////////
+
 model User {
   id            String    @id @default(uuid())
   name          String
   email         String    @unique
-  password      String   // ✅ JWT এর জন্য MUST
+  password      String
   emailVerified Boolean   @default(false)
+
+  role          Role      @default(USER)
+  status        UserStatus @default(ACTIVE)
+
   image         String?
-  role          String    @default("USER")
   phone         String?
-  status        String    @default("ACTIVE")
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   sessions      Session[]
   accounts      Account[]
-  events        Event[]          @relation("UserEvents")
+  events        Event[] @relation("UserEvents")
   participations Participation[]
-  reviews Review[]
+  reviews       Review[]
+
+  emailOtps     EmailOtp[]   
 
   @@map("user")
 }
+//////////////////////
+// 📧 EMAIL OTP
+//////////////////////
 model EmailOtp {
   id        String   @id @default(cuid())
   email     String
   otp       String
   expiresAt DateTime
   createdAt DateTime @default(now())
+
+  userId    String?
+  user      User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@map("email_otp")
 }
+
+//////////////////////
+// 🎉 EVENT
+//////////////////////
 
 model Event {
   id          String   @id @default(uuid())
@@ -50,7 +84,7 @@ model Event {
   date        DateTime
   venue       String?
   fee         Float    @default(0)
-  isPublic    Boolean
+  isPublic    Boolean  @default(true)
 
   creatorId   String
   creator     User     @relation("UserEvents", fields: [creatorId], references: [id], onDelete: Cascade)
@@ -60,14 +94,20 @@ model Event {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([creatorId])
 }
+
+//////////////////////
+// 🙋 PARTICIPATION
+//////////////////////
 
 model Participation {
   id        String   @id @default(uuid())
   userId    String
   eventId   String
 
-  status    String   @default("pending") // pending, approved, rejected
+  status    ParticipationStatus @default(PENDING)
   paid      Boolean  @default(false)
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -76,7 +116,12 @@ model Participation {
   createdAt DateTime @default(now())
 
   @@unique([userId, eventId])
+  @@index([eventId])
 }
+
+//////////////////////
+// ⭐ REVIEW
+//////////////////////
 
 model Review {
   id      String @id @default(uuid())
@@ -90,7 +135,13 @@ model Review {
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
+
+  @@index([eventId])
 }
+
+//////////////////////
+// 🔐 SESSION
+//////////////////////
 
 model Session {
   id        String   @id
@@ -98,8 +149,10 @@ model Session {
   token     String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
   ipAddress String?
   userAgent String?
+
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -107,17 +160,25 @@ model Session {
   @@map("session")
 }
 
+//////////////////////
+// 🔗 ACCOUNT (OAuth)
+//////////////////////
+
 model Account {
   id                    String    @id
   accountId             String
   providerId            String
+
   userId                String
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   accessToken           String?
   refreshToken          String?
   idToken               String?
+
   accessTokenExpiresAt  DateTime?
   refreshTokenExpiresAt DateTime?
+
   scope                 String?
   password              String?
 
@@ -128,6 +189,10 @@ model Account {
   @@map("account")
 }
 
+//////////////////////
+// 🔑 VERIFICATION (Better Auth)
+//////////////////////
+
 model Verification {
   id         String   @id
   identifier String
@@ -137,6 +202,6 @@ model Verification {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  @@index([identifier])
+  @@index([identifier]) 
   @@map("verification")
 }

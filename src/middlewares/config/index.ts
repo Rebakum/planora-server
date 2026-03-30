@@ -9,12 +9,12 @@ const config = {
   database_url: process.env.DATABASE_URL,
 
   jwt: {
-    secret: process.env.JWT_SECRET as string,
+    secret: process.env.JWT_ACCESS_SECRET as string,
     expires_in: process.env.JWT_EXPIRES_IN as string,
   },
 
   refresh_token: {
-    secret: process.env.REFRESH_TOKEN_SECRET as string,
+    secret: process.env.JWT_REFRESH_SECRET as string,
     expires_in: process.env.REFRESH_TOKEN_EXPIRES_IN as string,
   },
 

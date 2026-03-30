@@ -1,3 +1,12 @@
+-- CreateEnum
+CREATE TYPE "Role" AS ENUM ('ADMIN', 'USER');
+
+-- CreateEnum
+CREATE TYPE "UserStatus" AS ENUM ('ACTIVE', 'BLOCKED');
+
+-- CreateEnum
+CREATE TYPE "ParticipationStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
+
 -- CreateTable
 CREATE TABLE "user" (
     "id" TEXT NOT NULL,
@@ -5,10 +14,10 @@ CREATE TABLE "user" (
     "email" TEXT NOT NULL,
     "password" TEXT NOT NULL,
     "emailVerified" BOOLEAN NOT NULL DEFAULT false,
+    "role" "Role" NOT NULL DEFAULT 'USER',
+    "status" "UserStatus" NOT NULL DEFAULT 'ACTIVE',
     "image" TEXT,
-    "role" TEXT NOT NULL DEFAULT 'USER',
     "phone" TEXT,
-    "status" TEXT NOT NULL DEFAULT 'ACTIVE',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -16,14 +25,15 @@ CREATE TABLE "user" (
 );
 
 -- CreateTable
-CREATE TABLE "EmailOtp" (
+CREATE TABLE "email_otp" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "otp" TEXT NOT NULL,
     "expiresAt" TIMESTAMP(3) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "userId" TEXT,
 
-    CONSTRAINT "EmailOtp_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "email_otp_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -34,7 +44,7 @@ CREATE TABLE "Event" (
     "date" TIMESTAMP(3) NOT NULL,
     "venue" TEXT,
     "fee" DOUBLE PRECISION NOT NULL DEFAULT 0,
-    "isPublic" BOOLEAN NOT NULL,
+    "isPublic" BOOLEAN NOT NULL DEFAULT true,
     "creatorId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -47,7 +57,7 @@ CREATE TABLE "Participation" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "eventId" TEXT NOT NULL,
-    "status" TEXT NOT NULL DEFAULT 'pending',
+    "status" "ParticipationStatus" NOT NULL DEFAULT 'PENDING',
     "paid" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -115,7 +125,19 @@ CREATE TABLE "verification" (
 CREATE UNIQUE INDEX "user_email_key" ON "user"("email");
 
 -- CreateIndex
+CREATE INDEX "email_otp_email_idx" ON "email_otp"("email");
+
+-- CreateIndex
+CREATE INDEX "Event_creatorId_idx" ON "Event"("creatorId");
+
+-- CreateIndex
+CREATE INDEX "Participation_eventId_idx" ON "Participation"("eventId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Participation_userId_eventId_key" ON "Participation"("userId", "eventId");
+
+-- CreateIndex
+CREATE INDEX "Review_eventId_idx" ON "Review"("eventId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "session_token_key" ON "session"("token");
@@ -128,6 +150,9 @@ CREATE INDEX "account_userId_idx" ON "account"("userId");
 
 -- CreateIndex
 CREATE INDEX "verification_identifier_idx" ON "verification"("identifier");
+
+-- AddForeignKey
+ALTER TABLE "email_otp" ADD CONSTRAINT "email_otp_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Event" ADD CONSTRAINT "Event_creatorId_fkey" FOREIGN KEY ("creatorId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;

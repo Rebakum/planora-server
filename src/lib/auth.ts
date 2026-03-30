@@ -33,8 +33,8 @@ export const auth = betterAuth({
 
   emailAndPassword: {
     enabled: true,
-    autoSignIn: false, // ❗ signup এর পর login হবে না
-    requireEmailVerification: true, // ❗ verify না করলে login blocked
+    autoSignIn: false, 
+    requireEmailVerification: true,
   },
 
   emailVerification: {

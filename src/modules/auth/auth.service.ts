@@ -1,14 +1,9 @@
 import bcrypt from "bcrypt";
 import { sendOTP } from "../../utils/email";
 import { prisma } from "../../lib/prisma";
-import crypto from "crypto";
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../../utils/jwt";
 
-import {
-  generateAccessToken,
-  generateRefreshToken,
-  verifyRefreshToken,
-} from "../../utils/jwt";
-
+//  Signup (OTP create)
 export const signupService = async (payload: any) => {
   const { email, password, name } = payload;
 
@@ -24,58 +19,100 @@ export const signupService = async (payload: any) => {
 
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-await prisma.user.create({
-  data: {
-    email,
-    password: hashedPassword,
-    name,
-    role: "USER",
-
-    emailOtps: {
-      create: {
-        email,
-        otp,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+  await prisma.user.create({
+    data: {
+      email,
+      password: hashedPassword,
+      name,
+      role: "USER",
+      emailOtps: {
+        create: {
+          email,
+          otp,
+          expiresAt: new Date(Date.now() + 5 * 60 * 1000), // ⏳ 5 min
+        },
       },
     },
-  },
-});
+  });
 
   await sendOTP(email, otp);
 
   return { message: "Check email for OTP" };
 };
 
+// 🔐 Verify OTP (⛔ attempts + ⏳ expiry)
 export const verifyOTPService = async (payload: any) => {
   const { email, otp } = payload;
 
   const record = await prisma.emailOtp.findFirst({
-    where: {
-      email,
-      otp,
-    },
+    where: { email },
+    orderBy: { createdAt: "desc" },
   });
 
-  if (!record) {
-    throw new Error("Invalid OTP");
+  if (!record) throw new Error("OTP not found");
+
+  // ⛔ attempt limit
+  if (record.attempts >= 3) {
+    throw new Error("Too many attempts. Please resend OTP");
   }
 
+  // ⏳ expiry check
   if (record.expiresAt < new Date()) {
     throw new Error("OTP expired");
   }
 
+  // ❌ wrong OTP
+  if (record.otp !== otp) {
+    await prisma.emailOtp.update({
+      where: { id: record.id },
+      data: { attempts: record.attempts + 1 },
+    });
+
+    throw new Error("Invalid OTP");
+  }
+
+  //  success
   await prisma.user.update({
     where: { email },
-    data: {
-      emailVerified: true,
-    },
+    data: { emailVerified: true },
   });
 
   await prisma.emailOtp.deleteMany({
     where: { email },
   });
 
-  return { message: "Email verified" };
+  return { message: "Email verified successfully" };
+};
+
+//  Resend OTP
+export const resendOTPService = async (email: string) => {
+  const user = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (!user) throw new Error("User not found");
+
+  if (user.emailVerified) {
+    throw new Error("Email already verified");
+  }
+
+  //  old OTP delete
+  await prisma.emailOtp.deleteMany({ where: { email } });
+
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+  await prisma.emailOtp.create({
+    data: {
+      email,
+      otp,
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+      attempts: 0,
+    },
+  });
+
+  await sendOTP(email, otp);
+
+  return { message: "OTP resent successfully" };
 };
 
 export const loginService = async (payload: any, req: any) => {

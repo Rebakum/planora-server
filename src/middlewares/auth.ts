@@ -1,71 +1,60 @@
-import { NextFunction, Request, Response } from "express";
-import { auth as betterAuth } from "../lib/auth";
+// import { NextFunction, Request, Response } from "express";
+// import { auth as betterAuth } from "../lib/auth";
 
-export enum UserRole {
-  user = "user",
-  admin = "admin",
-}
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        email: string;
-        name: string;
-        role: UserRole;
-        emailVerified: boolean;
-      };
-    }
-  }
-}
+// export enum UserRole {
+//   user = "USER",
+//   admin = "ADMIN",
+// }
 
-//middle ware
-const auth = (...roles: UserRole[]) => {
-  return async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const session = await betterAuth.api.getSession({
-        headers: req.headers as any,
-      });
+// const auth = (...roles: UserRole[]) => {
+//   return async (req: any, res: Response, next: NextFunction) => {
+//     try {
+//       const session = await betterAuth.api.getSession({
+//         headers: req.headers as any,
+        
+//       });
+//       console.log("HEADERS:", req.headers);
+// console.log("HEADERS:", req.headers);
+// console.log("SESSION:", session);
 
-      if (!session || !session.user) {
-        return res.status(401).json({
-          success: false,
-          message: "Unauthorized",
-        });
-      }
 
-      // optional (better UX)
-      if (!session.user.emailVerified) {
-        return res.status(403).json({
-          success: false,
-          message: "Please verify your email first",
-        });
-      }
+//             if (!session?.user?.id) {
+//         return res.status(401).json({
+//           success: false,
+//           message: "No valid session found",
+//         });
+//       }
 
-      req.user = {
-        id: session.user.id,
-        email: session.user.email,
-        name: session.user.name,
-        role: (session.user.role as UserRole) || UserRole.user,
-        emailVerified: session.user.emailVerified,
-      };
+//       if (!session.user.emailVerified) {
+//         return res.status(403).json({
+//           success: false,
+//           message: "Please verify your email first",
+//         });
+//       }
 
-      // 🔥 ROLE CHECK
-      if (roles.length && !roles.includes(req.user.role)) {
-        return res.status(403).json({
-          success: false,
-          message: "Forbidden",
-        });
-      }
+//       req.user = {
+//         id: session.user.id,
+//         email: session.user.email,
+//         name: session.user.name,
+//         role: (session.user.role as UserRole) || UserRole.user,
+//         emailVerified: session.user.emailVerified,
+//       };
 
-      next();
-    } catch (error) {
-      console.error("Auth Error:", error);
-      return res.status(500).json({
-        success: false,
-        message: "Authentication failed",
-      });
-    }
-  };
-};
-export default auth;
+//       if (roles.length > 0 && !roles.includes(req.user.role)) {
+//         return res.status(403).json({
+//           success: false,
+//           message: "Forbidden",
+//         });
+//       }
+
+//       next();
+//     } catch (error) {
+//       return res.status(401).json({
+//         success: false,
+//         message: "Invalid session",
+//       });
+//     }
+//   };
+// };
+
+// export default auth;

@@ -5,6 +5,7 @@ export const validateRequest =
   (schema: ZodSchema) =>
   (req: Request, res: Response, next: NextFunction) => {
     const result = schema.safeParse(req.body);
+    console.log(req.body);
 
     if (!result.success) {
       return res.status(400).json({
@@ -13,6 +14,6 @@ export const validateRequest =
       });
     }
 
-    req.body = result.data; // 🔥 cleaned + validated data
+    req.body = result.data; 
     next();
   };

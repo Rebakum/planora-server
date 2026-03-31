@@ -29,6 +29,7 @@ CREATE TABLE "email_otp" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "otp" TEXT NOT NULL,
+    "attempts" INTEGER NOT NULL DEFAULT 0,
     "expiresAt" TIMESTAMP(3) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "userId" TEXT,
@@ -128,16 +129,25 @@ CREATE UNIQUE INDEX "user_email_key" ON "user"("email");
 CREATE INDEX "email_otp_email_idx" ON "email_otp"("email");
 
 -- CreateIndex
+CREATE INDEX "email_otp_userId_idx" ON "email_otp"("userId");
+
+-- CreateIndex
 CREATE INDEX "Event_creatorId_idx" ON "Event"("creatorId");
 
 -- CreateIndex
 CREATE INDEX "Participation_eventId_idx" ON "Participation"("eventId");
 
 -- CreateIndex
+CREATE INDEX "Participation_userId_idx" ON "Participation"("userId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Participation_userId_eventId_key" ON "Participation"("userId", "eventId");
 
 -- CreateIndex
 CREATE INDEX "Review_eventId_idx" ON "Review"("eventId");
+
+-- CreateIndex
+CREATE INDEX "Review_userId_idx" ON "Review"("userId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "session_token_key" ON "session"("token");

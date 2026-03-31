@@ -1,4 +1,5 @@
-import { UserRole } from "@prisma/client";
+import { Role } from "@prisma/client";
+import { UserRole } from "../middlewares/auth";
 
 declare global {
   namespace Express {
@@ -7,7 +8,7 @@ declare global {
         id: string;
         email: string;
         name: string;
-        role: UserRole;
+        role: Role;
         emailVerified: boolean;
       };
     }

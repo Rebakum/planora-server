@@ -6,11 +6,11 @@ const envSchema = z.object({
   PORT: z.string().optional(),
   NODE_ENV: z.string().optional(),
 
-  JWT_SECRET: z.string().optional(),
-  JWT_EXPIRES_IN: z.string().optional(),
+  JWT_ACCESS_SECRET: z.string(),
+  JWT_EXPIRES_IN: z.string(),
 
-  REFRESH_TOKEN_SECRET: z.string().optional(),
-  REFRESH_TOKEN_EXPIRES_IN: z.string().optional(),
+  JWT_REFRESH_SECRET: z.string(),
+  REFRESH_TOKEN_EXPIRES_IN: z.string(),
 
   BETTER_AUTH_SECRET: z.string(),
   BETTER_AUTH_URL: z.string(),
@@ -20,6 +20,9 @@ const envSchema = z.object({
 
   APP_USER: z.string(),
   APP_PASSWORD: z.string(),
+
+  ADMIN_EMAIL: z.string(),
+  ADMIN_PASSWORD: z.string(),
 });
 
 export const validateEnv = () => {

@@ -6,9 +6,7 @@ datasource db {
   provider = "postgresql"
 }
 
-//////////////////////
 // 🔐 ENUMS
-//////////////////////
 
 enum Role {
   ADMIN
@@ -26,9 +24,7 @@ enum ParticipationStatus {
   REJECTED
 }
 
-//////////////////////
 // 👤 USER
-//////////////////////
 
 model User {
   id            String    @id @default(uuid())
@@ -51,31 +47,35 @@ model User {
   events        Event[] @relation("UserEvents")
   participations Participation[]
   reviews       Review[]
-
-  emailOtps     EmailOtp[]   
+  emailOtps     EmailOtp[]
 
   @@map("user")
 }
-//////////////////////
-// 📧 EMAIL OTP
-//////////////////////
-model EmailOtp {
-  id        String   @id @default(cuid())
-  email     String
-  otp       String
-  expiresAt DateTime
-  createdAt DateTime @default(now())
 
-  userId    String?
-  user      User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+// 📧 EMAIL OTP (UPDATED)
+
+model EmailOtp {
+  id         String   @id @default(cuid())
+  email      String
+
+  otp        String
+
+  //  security feature
+  attempts   Int      @default(0)
+
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  // optional relation
+  userId     String?
+  user       User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([email])
+  @@index([userId])
   @@map("email_otp")
 }
 
-//////////////////////
 // 🎉 EVENT
-//////////////////////
 
 model Event {
   id          String   @id @default(uuid())
@@ -98,9 +98,7 @@ model Event {
   @@index([creatorId])
 }
 
-//////////////////////
 // 🙋 PARTICIPATION
-//////////////////////
 
 model Participation {
   id        String   @id @default(uuid())
@@ -117,11 +115,10 @@ model Participation {
 
   @@unique([userId, eventId])
   @@index([eventId])
+  @@index([userId])
 }
 
-//////////////////////
 // ⭐ REVIEW
-//////////////////////
 
 model Review {
   id      String @id @default(uuid())
@@ -137,11 +134,11 @@ model Review {
   createdAt DateTime @default(now())
 
   @@index([eventId])
+  @@index([userId])
 }
 
-//////////////////////
+
 // 🔐 SESSION
-//////////////////////
 
 model Session {
   id        String   @id
@@ -160,9 +157,7 @@ model Session {
   @@map("session")
 }
 
-//////////////////////
 // 🔗 ACCOUNT (OAuth)
-//////////////////////
 
 model Account {
   id                    String    @id
@@ -189,9 +184,7 @@ model Account {
   @@map("account")
 }
 
-//////////////////////
-// 🔑 VERIFICATION (Better Auth)
-//////////////////////
+// 🔑 VERIFICATION
 
 model Verification {
   id         String   @id
@@ -202,6 +195,6 @@ model Verification {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  @@index([identifier]) 
+  @@index([identifier])
   @@map("verification")
 }

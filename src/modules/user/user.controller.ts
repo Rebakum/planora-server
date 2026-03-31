@@ -24,8 +24,10 @@ import { userService } from "./user.service";
 };
 
 // ADMIN: DELETE USER
- const deleteUser = async (req: Request, res: Response) => {
-  await userService.deleteUser(req.user!.id);
+const deleteUser = async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  await userService.deleteUser(id);
 
   res.json({
     success: true,

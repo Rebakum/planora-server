@@ -7,9 +7,8 @@ import {
   verifyOTPService,
   getMySessionsService,
   logoutAllService,
+  resendOTPService,
 } from "./auth.service";
-
-import jwt from "jsonwebtoken";
 
 
 export const signup = async (req: Request, res: Response) => {
@@ -24,6 +23,16 @@ export const signup = async (req: Request, res: Response) => {
 export const verifyOTP = async (req: Request, res: Response) => {
   try {
     const result = await verifyOTPService(req.body);
+    res.json(result);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const resendOTP = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    const result = await resendOTPService(email);
     res.json(result);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
@@ -84,7 +93,7 @@ export const refreshTokenController = async (req: any, res: any) => {
 
 export const getMySessions = async (req: any, res: any) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user!.id;
 
     const sessions = await getMySessionsService(userId);
 
@@ -94,17 +103,20 @@ export const getMySessions = async (req: any, res: any) => {
   }
 };
 
-export const logoutAllDevices = async (req: any, res: any) => {
+export const logoutAllDevices = async (req: any, res: Response) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user!.id;
 
     await logoutAllService(userId);
 
-    res.clearCookie("accessToken");
-    res.clearCookie("refreshToken");
-
-    res.json({ message: "Logged out from all devices" });
-  } catch (err: any) {
-    res.status(400).json({ message: err.message });
+    return res.json({
+      success: true,
+      message: "Logged out successfully",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Logout failed",
+    });
   }
 };

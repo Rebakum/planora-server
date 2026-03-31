@@ -1,32 +1,36 @@
 import { prisma } from "../lib/prisma";
 import bcrypt from "bcrypt";
+import { Role } from "@prisma/client";
+import config from "../middlewares/config";
+
 
 export const bootstrapSuperAdmin = async () => {
   try {
-    const adminEmail = "admin@planora.com";
-
     const existingAdmin = await prisma.user.findUnique({
-      where: { email: adminEmail },
+      where: { email: config.admin.email },
     });
 
     if (existingAdmin) {
       console.log("Super Admin already exists");
-      return;
+      return; 
     }
 
-    const hashedPassword = await bcrypt.hash("Admin@123", 10);
+    const hashedPassword = await bcrypt.hash(
+      config.admin.password,
+      10
+    );
 
-    const admin = await prisma.user.create({
+    await prisma.user.create({
       data: {
         name: "Super Admin",
-        email: adminEmail,
+        email: config.admin.email,
         password: hashedPassword,
-        role: "SUPER_ADMIN",
+        role: Role.ADMIN,
       },
     });
 
-    console.log("Super Admin created successfully:", admin.email);
+    console.log("🔥 Super Admin created successfully");
   } catch (error) {
-    console.error("Bootstrap admin error:", error);
+    console.error("❌ Bootstrap admin error:", error);
   }
 };

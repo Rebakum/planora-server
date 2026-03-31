@@ -1,18 +1,19 @@
 import express from "express";
-import auth, { UserRole } from "../../middlewares/auth";
+
 import { userController } from "./user.controller";
-import { authMiddleware } from "../../middlewares/authMiddleware";
+import auth from "../../middlewares/authMiddleware";
+
 
 
 
 const userRouter = express.Router();
 
 //  current user
-userRouter.get("/me", authMiddleware, userController.getMe);
-userRouter.patch("/me", authMiddleware, userController.updateMe);
+userRouter.get("/me",auth(), userController.getMe);
+userRouter.patch("/me",auth(), userController.updateMe);
 
 //  admin only
-userRouter.delete("/", authMiddleware, userController.deleteUser);
-userRouter.get("/", authMiddleware, userController.getAllUsers);
+userRouter.delete("/:id",auth("ADMIN"), userController.deleteUser);
+userRouter.get("/",auth("ADMIN"), userController.getAllUsers);
 
 export default userRouter;
